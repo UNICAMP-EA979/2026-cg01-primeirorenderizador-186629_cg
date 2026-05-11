@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from urenderer.node import Camera, Node
@@ -7,31 +9,31 @@ from .renderer import Renderer
 
 
 class PyplotRenderer(Renderer):
-    """
+    '''
     Simple renderer using PyPlot.
-    """
+    '''
 
     def __init__(self, screen_width: float, screen_height: float, show: bool = True) -> None:
-        """
+        '''
         PyplotRenderer initializer.
 
         Args:
             screen_width (float): screen width
             screen_height (float): screen height
             show (bool, optional): if should show the rendered frame. Defaults to True.
-        """
+        '''
         super().__init__(screen_width, screen_height)
         self.show = show
 
     def start(self, camera: Camera, view_matrix: np.ndarray, name: str = ""):
-        """
+        '''
         Start the frame rendering
 
         Args:
             camera (Camera): current camera.
             view_matrix (np.ndarray): camera view matrix.
             name (str): name of the application
-        """
+        '''
         self._fig = plt.figure()
         plt.title(name)
         self._name = name
@@ -44,7 +46,7 @@ class PyplotRenderer(Renderer):
         self._depth = []
 
     def validate(self, node: Node) -> bool:
-        """
+        '''
         Validate a node for rendering.
 
         Check if the node is compatible to be rendered with this renderer.
@@ -54,12 +56,12 @@ class PyplotRenderer(Renderer):
 
         Returns:
             bool: True if the node is valid
-        """
+        '''
         return "geometry_index" in node.render_data and "geometry_vertex" in node.render_data
 
     def _stage_vertex_shading(self, triangle: np.ndarray,
                               model_transformation: np.ndarray) -> np.ndarray:
-        """
+        '''
         Geometry vertex shading stage.
 
         Projects the triangle to the view volume.
@@ -70,19 +72,19 @@ class PyplotRenderer(Renderer):
 
         Returns:
             np.ndarray: the projected triangle
-        """
+        '''
         ## SEU CÓDIGO AQUI #####################################################
         # Projete o triângulo, combinando a matriz de transformação do modelo,
         # view matrix (self._view_matrix) e a matriz de projeção (self._projection_matrix)
 
-        """
+        '''
         Raciocínio:
             Para cada vértice v (homogêneo) calculamos:
                 v_clip = P @ V @ M @ v
             Onde P = projection, V = view, M = model_transformation.
             A operação é vetorizada aplicando as matrizes sobre todos os vértices
             em uma única multiplicação matricial.
-        """
+        '''
 
         # Combine model, view and projection and apply to all vertices
         triangle_proj = (self._projection_matrix @ self._view_matrix @ model_transformation @ triangle.T).T
@@ -92,7 +94,7 @@ class PyplotRenderer(Renderer):
         return triangle_proj
 
     def _stage_clipping(self, triangle: np.ndarray) -> tuple[bool, np.ndarray]:
-        """
+        '''
         Geometry clipping stage.
 
         It checks if the triangle is visible and normalizes it. If it's not visible, it doesn't process the triangle.
@@ -104,7 +106,7 @@ class PyplotRenderer(Renderer):
 
         Returns:
             tuple[bool, np.ndarray]: if the triangle was clipped, and the triangle normalized if it was not.
-        """
+        '''
 
         ## SEU CÓDIGO AQUI #####################################################
         # Realize o clipping do triângulo
@@ -137,7 +139,7 @@ class PyplotRenderer(Renderer):
         #########################################################################
 
     def _stage_screen_mapping(self, triangle: np.ndarray) -> np.ndarray:
-        """
+        '''
         Geometry screen mapping stage.
 
         Maps the triangle from the normalized device coordinates [-1, 1]
@@ -147,39 +149,42 @@ class PyplotRenderer(Renderer):
 
         Returns:
             np.ndarray: mapped triangle
-        """
+        '''
         ## SEU CÓDIGO AQUI #####################################################
         # Mapeie o triângulo que está no intervalo [-1, 1]
         # A primeira coordenada deve ser mapeada para [0, self.screen_width]
         # A segunda coordenada deve ser mapeada para [0, self.screen_height]
 
-        """
+        '''
         Raciocínio:
             Recebemos triângulos em coordenadas normalizadas (NDC) no intervalo
             [-1, 1]. O mapeamento para a tela é linear:
                 x_screen = (x_ndc + 1) * 0.5 * screen_width
                 y_screen = (y_ndc + 1) * 0.5 * screen_height
-            Mantemos z para eventuais cálculos de profundidade e preservamos w.
-        """
+                z_screen = (z_ndc + 1) * 0.5
+            O eixo z (profundidade) é normalizado de [-1, 1] para [0, 1],
+            intervalo padrão do depth buffer, usando fator 0.5 (sem escala de tela).
+            O componente w é preservado sem alteração.
+        '''
 
         triangle_screen = triangle.copy()
-        # Assume-se que triangle já está em NDC (w == 1.0)
         triangle_screen[:, 0] = (triangle[:, 0] + 1.0) * 0.5 * self.screen_width
         triangle_screen[:, 1] = (triangle[:, 1] + 1.0) * 0.5 * self.screen_height
-        # z stays as is (depth), w stays as is (typically 1.0)
+        triangle_screen[:, 2] = (triangle[:, 2] + 1.0) * 0.5
+        # w é preservado sem alteração (tipicamente 1.0 após divisão perspectiva)
 
         #########################################################################
 
         return triangle_screen
 
     def render_valid_node(self, node: Node, model_transformation: np.ndarray):
-        """
+        '''
         Renders a validated node
 
         Args:
             node (Node): node to render
             model_transformation (np.ndarray): node model transformation in the scene
-        """
+        '''
 
         # Get the node geometry data
         geometry_index = node.render_data["geometry_index"]
@@ -208,12 +213,12 @@ class PyplotRenderer(Renderer):
             self._depth.append(np.mean(triangle_ndc[:, 2]))
 
     def end(self, capture: bool = False):
-        """
+        '''
         Ends the frame rendering
 
         Args:
             capture (bool, optional): if should save the current frame. Defaults to False.
-        """
+        '''
 
         # Draw the triangles using painter's algorithm
         indexes = np.argsort(np.array(self._depth))
