@@ -18,14 +18,14 @@ from urenderer.node import Node
 
 
 def animate_over_time(node: Node, deltaTime: float, time_since_start: float) -> None:
-    '''
+    """
     Anima um nó
 
     Args:
         node (Node): nó a ser animado
         deltaTime (float): tempo desde o último update
         time_since_start (float): tempo desde o começo da aplicação
-    '''
+    """
     node.rotation[1] = 360*np.sin(time_since_start)
 
 

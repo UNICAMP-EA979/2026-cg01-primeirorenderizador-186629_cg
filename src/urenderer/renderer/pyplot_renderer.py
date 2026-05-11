@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from urenderer.node import Camera, Node
@@ -73,9 +75,19 @@ class PyplotRenderer(Renderer):
         '''
         ## SEU CÓDIGO AQUI #####################################################
         # Projete o triângulo, combinando a matriz de transformação do modelo,
-        #  view matriz (self._view_matrix) e a matriz de projeção (self._projection_matrix)
+        # view matrix (self._view_matrix) e a matriz de projeção (self._projection_matrix)
 
-        triangle_proj =
+        '''
+        Raciocínio:
+            Para cada vértice v (homogêneo) calculamos:
+                v_clip = P @ V @ M @ v
+            Onde P = projection, V = view, M = model_transformation.
+            A operação é vetorizada aplicando as matrizes sobre todos os vértices
+            em uma única multiplicação matricial.
+        '''
+
+        # Combine model, view and projection and apply to all vertices
+        triangle_proj = (self._projection_matrix @ self._view_matrix @ model_transformation @ triangle.T).T
 
         #########################################################################
 
@@ -99,16 +111,27 @@ class PyplotRenderer(Renderer):
         ## SEU CÓDIGO AQUI #####################################################
         # Realize o clipping do triângulo
 
-        # Cheque se o triângulo está inteiramente visível
         # Cada vértice é composto por quatro valores triangle[i] = [v_x, v_y, v_z, v_w]
-        # Todos os vértices do triângulo devem estar dentro do volume: -v_w <= v_x, v_y, v_z <= v_w
+        xs = triangle[:, 0]
+        ys = triangle[:, 1]
+        zs = triangle[:, 2]
+        ws = triangle[:, 3]
 
-        # Checa se o triângulo removido
-        clip =
+        # Verifica se todos os vértices estão dentro do volume de visão
+        inside = np.all((xs >= -ws) & (xs <= ws) &
+                        (ys >= -ws) & (ys <= ws) &
+                        (zs >= -ws) & (zs <= ws))
+
+        # Se não estiver completamente dentro, marcamos como removido (clip=True)
+        clip = not inside
 
         if not clip:
-            # Normalize o triângulo, dividindo cada vértice pelo seu último valor v_w
-            triangle_ndc =
+            # Normalize o triângulo, dividindo cada vértice pelo seu v_w
+            triangle_ndc = triangle.copy()
+            triangle_ndc[:, 0] = triangle[:, 0] / triangle[:, 3]
+            triangle_ndc[:, 1] = triangle[:, 1] / triangle[:, 3]
+            triangle_ndc[:, 2] = triangle[:, 2] / triangle[:, 3]
+            triangle_ndc[:, 3] = triangle[:, 3] / triangle[:, 3]
 
             return clip, triangle_ndc
 
@@ -132,9 +155,27 @@ class PyplotRenderer(Renderer):
         # A primeira coordenada deve ser mapeada para [0, self.screen_width]
         # A segunda coordenada deve ser mapeada para [0, self.screen_height]
 
+        '''
+        Raciocínio:
+            Recebemos triângulos em coordenadas normalizadas (NDC) no intervalo
+            [-1, 1]. O mapeamento para a tela é linear:
+                x_screen = (x_ndc + 1) * 0.5 * screen_width
+                y_screen = (y_ndc + 1) * 0.5 * screen_height
+                z_screen = (z_ndc + 1) * 0.5
+            O eixo z (profundidade) é normalizado de [-1, 1] para [0, 1],
+            intervalo padrão do depth buffer, usando fator 0.5 (sem escala de tela).
+            O componente w é preservado sem alteração.
+        '''
+
+        triangle_screen = triangle.copy()
+        triangle_screen[:, 0] = (triangle[:, 0] + 1.0) * 0.5 * self.screen_width
+        triangle_screen[:, 1] = (triangle[:, 1] + 1.0) * 0.5 * self.screen_height
+        triangle_screen[:, 2] = (triangle[:, 2] + 1.0) * 0.5
+        # w é preservado sem alteração (tipicamente 1.0 após divisão perspectiva)
+
         #########################################################################
 
-        return triangle
+        return triangle_screen
 
     def render_valid_node(self, node: Node, model_transformation: np.ndarray):
         '''

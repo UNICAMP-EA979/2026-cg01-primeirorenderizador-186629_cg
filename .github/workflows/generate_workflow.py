@@ -1,4 +1,4 @@
-start = '''name: Autograding Tests
+start = """name: Autograding Tests
 on: push
 permissions:
   checks: write
@@ -19,9 +19,9 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install .[tests]
-'''
+"""
 
-step_template = '''      - name: {name}
+step_template = """      - name: {name}
         id: {id}
         uses: classroom-resources/autograding-command-grader@v1
         with:
@@ -30,19 +30,19 @@ step_template = '''      - name: {name}
             command: pytest {path}
             timeout: 2
             max-score: {score}
-'''
+"""
 
-result_template = '''{name}: "${{{{steps.{id}.outputs.result}}}}"'''
+result_template = """{name}: "${{{{steps.{id}.outputs.result}}}}""""
 
 
-reporter_step_template = '''      - name: Autograding Reporter
+reporter_step_template = """      - name: Autograding Reporter
         uses: classroom-resources/autograding-grading-reporter@v1
         env:
           {results}
         with:
             runners: {ids}
       
-'''
+"""
 
 if __name__ == "__main__":
     rules = []

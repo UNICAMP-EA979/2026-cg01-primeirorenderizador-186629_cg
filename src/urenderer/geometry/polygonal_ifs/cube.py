@@ -2,12 +2,12 @@ import numpy as np
 
 
 def get_ifs_cube() -> dict:
-    '''
+    """
     Get Indexed Face Set of a cube
 
     Returns:
         dict: node render data for a cube.
-    '''
+    """
     geometry_vertex = np.array([
         [0, 0, 0],  # A0
         [1, 0, 0],  # B1
